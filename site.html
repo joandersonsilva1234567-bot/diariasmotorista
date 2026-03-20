@@ -1,0 +1,12 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><title>Site Massfix</title></head><body>
+<div class="container-wide">
+<div class="topbar"><div class="brand-row"><div class="logo-badge">M</div><div class="brand-name" id="nomeEmpresa">Massfix</div></div><div><a class="btn btn-white" style="width:auto;padding:10px 14px" href="/cadastro.html">Criar cadastro</a> <a class="btn btn-outline" style="width:auto;padding:10px 14px" href="/login.html">Entrar</a></div></div>
+<div class="desktop-layout">
+<div class="hero"><div class="badge">Versao web do motorista</div><h1>Mesmo sistema do app</h1><p class="muted">Aqui no navegador o motorista encontra as mesmas funcoes do app: login, registros, despesas e pagamentos.</p><a class="btn btn-dark" href="/login.html">Acessar agora</a></div>
+<div class="card"><div class="badge">Compativel</div><p class="muted">Layout responsivo para celular, tablet e notebook.</p></div>
+</div>
+</div>
+<script>
+async function carregarConfig(){ const r=await fetch('/config'); const cfg=await r.json(); if(cfg.nome_empresa) nomeEmpresa.textContent=cfg.nome_empresa; }
+carregarConfig();
+</script></body></html>

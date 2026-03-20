@@ -1,0 +1,12 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><title>Login Administrador · Massfix</title></head><body>
+<div class="container">
+<div class="topbar"><div class="brand-row"><div class="logo-badge">M</div><div class="brand-name">Massfix Admin</div></div><a href="/index.html">Inicio</a></div>
+<div class="hero"><div class="badge">Acesso administrativo</div><h2>Entrar no painel</h2><p class="muted">Usuario padrao inicial: admin / admin123</p></div>
+<div class="card mt-16"><div>Usuario</div><input class="input" id="usuario"><div class="mt-16">Senha</div><input class="input" id="senha" type="password"><button class="btn btn-white mt-16" onclick="entrarAdmin()">Entrar</button></div>
+</div>
+<script>
+async function entrarAdmin(){
+ const r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario:usuario.value,senha:senha.value})});
+ const txt=await r.text(); if(r.ok) location='/admin.html'; else alert(txt||'Erro no login administrativo.');
+}
+</script></body></html>

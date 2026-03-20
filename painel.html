@@ -1,0 +1,59 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><title>Painel do Motorista · Massfix</title></head><body>
+<div class="container">
+<div class="topbar"><div class="brand-row"><div class="logo-badge">M</div><div class="brand-name">Painel do motorista</div></div><button class="btn btn-outline" style="width:auto;padding:10px 14px" onclick="sair()">Sair</button></div>
+<div class="hero"><div class="badge">Motorista</div><h2>Registrar comprovantes e despesas</h2><div id="dadosMotorista" class="muted">Carregando...</div></div>
+<div class="kpis mt-16">
+  <div class="kpi">Almoco<br><b id="vAlmoco">R$ 35</b></div>
+  <div class="kpi">Janta<br><b id="vJanta">R$ 35</b></div>
+  <div class="kpi">Pernoite<br><b id="vPernoite">R$ 200</b></div>
+  <div class="kpi">Outras despesas<br><b>Com comprovante</b></div>
+</div>
+<div class="card mt-16">
+<div>Ordem da caixa</div><input class="input" id="ordem">
+<div class="mt-16">Numero da caixa</div><input class="input" id="caixa">
+<div class="mt-16">Observacao</div><textarea class="textarea" id="observacao"></textarea>
+<div class="mt-16">Foto da NF</div><input class="input" type="file" id="foto_nf" accept="image/*" capture="environment">
+<div class="mt-16">Comprovante de recebimento do material</div><input class="input" type="file" id="foto_recebimento" accept="image/*" capture="environment">
+<div class="action-grid mt-20">
+<button class="action green" onclick="registrar('almoco', valorAlmoco, false)">Almoco<br><span id="lblAlmoco">R$ 35</span></button>
+<button class="action orange" onclick="registrar('janta', valorJanta, false)">Janta<br><span id="lblJanta">R$ 35</span></button>
+<button class="action purple" onclick="registrar('pernoite', valorPernoite, false)">Pernoite<br><span id="lblPernoite">R$ 200</span></button>
+</div>
+<button class="btn btn-dark mt-16" onclick="toggleDespesa()">Outras despesas</button>
+<div id="boxDespesa" class="hidden mt-16">
+<div>Valor</div><input class="input" id="valor_despesa" type="number" step="0.01">
+<div class="mt-16">Descricao</div><textarea class="textarea" id="descricao_despesa"></textarea>
+<div class="mt-16">Comprovante da despesa</div><input class="input" type="file" id="foto_despesa" accept="image/*" capture="environment">
+<button class="btn btn-white mt-16" onclick="registrar('outras_despesas', Number(valor_despesa.value||0), true)">Salvar outras despesas</button>
+</div>
+</div>
+<div class="card mt-16"><div>Meus pagamentos</div><div class="table-wrap"><table id="tabelaPagamentos"><thead><tr><th>Tipo</th><th>Valor</th><th>Status</th><th>Comprovante</th></tr></thead><tbody></tbody></table></div></div>
+</div>
+<script>
+let valorAlmoco=35, valorJanta=35, valorPernoite=200;
+async function carregarConfig(){
+ const r=await fetch('/config'); const cfg=await r.json();
+ valorAlmoco=Number(cfg.valor_almoco||35); valorJanta=Number(cfg.valor_janta||35); valorPernoite=Number(cfg.valor_pernoite||200);
+ vAlmoco.textContent='R$ '+valorAlmoco.toFixed(2); vJanta.textContent='R$ '+valorJanta.toFixed(2); vPernoite.textContent='R$ '+valorPernoite.toFixed(2);
+ lblAlmoco.textContent='R$ '+valorAlmoco.toFixed(2); lblJanta.textContent='R$ '+valorJanta.toFixed(2); lblPernoite.textContent='R$ '+valorPernoite.toFixed(2);
+}
+async function carregarMotorista(){ const r=await fetch('/me'); if(!r.ok){ location='/login.html'; return; } const u=await r.json(); dadosMotorista.textContent=u.nome+' · CPF '+u.cpf+' · Placa '+u.placa; }
+async function carregarPagamentos(){ const r=await fetch('/me/pagamentos'); if(!r.ok) return; const dados=await r.json(); const tbody=document.querySelector('#tabelaPagamentos tbody'); tbody.innerHTML=''; dados.forEach(d=>{ const st=d.status_pagamento==='pago' ? "<span class='status-pago'>Pago</span>" : "<span class='status-pendente'>Pendente</span>"; const comp=d.comprovante_pagamento ? '<a href="/uploads/'+d.comprovante_pagamento+'" target="_blank">Abrir</a>' : ''; const tr=document.createElement('tr'); tr.innerHTML='<td>'+d.tipo+'</td><td>R$ '+Number(d.valor||0).toFixed(2)+'</td><td>'+st+'</td><td>'+comp+'</td>'; tbody.appendChild(tr); }); }
+async function sair(){ await fetch('/logout',{method:'POST'}); location='/login.html'; }
+function toggleDespesa(){ boxDespesa.classList.toggle('hidden'); }
+function limparCampos(){ ordem.value=''; caixa.value=''; observacao.value=''; foto_nf.value=''; foto_recebimento.value=''; valor_despesa.value=''; descricao_despesa.value=''; foto_despesa.value=''; }
+function registrar(tipo, valor, isDespesa){
+ if(!ordem.value || !caixa.value){ alert('Preencha ordem e caixa.'); return; }
+ if(isDespesa && (!valor || !descricao_despesa.value)){ alert('Preencha valor e descricao da despesa.'); return; }
+ navigator.geolocation.getCurrentPosition(async pos=>{
+   const fd=new FormData();
+   fd.append('tipo', tipo); fd.append('valor', valor); fd.append('ordem', ordem.value); fd.append('caixa', caixa.value); fd.append('observacao', observacao.value); fd.append('latitude', pos.coords.latitude); fd.append('longitude', pos.coords.longitude); fd.append('origem','app');
+   if(foto_nf.files[0]) fd.append('foto_nf', foto_nf.files[0]);
+   if(foto_recebimento.files[0]) fd.append('foto_recebimento', foto_recebimento.files[0]);
+   if(isDespesa){ fd.append('descricao_despesa', descricao_despesa.value); if(foto_despesa.files[0]) fd.append('foto_despesa', foto_despesa.files[0]); }
+   const r=await fetch('/registro',{method:'POST', body:fd}); const txt=await r.text();
+   if(r.ok){ alert('Registro enviado com sucesso.'); limparCampos(); boxDespesa.classList.add('hidden'); carregarPagamentos(); } else alert(txt||'Erro');
+ }, ()=>alert('Ative a localizacao do celular.'));
+}
+carregarConfig(); carregarMotorista(); carregarPagamentos();
+</script></body></html>
