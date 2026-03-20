@@ -1,0 +1,12 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><title>Login do Motorista · Massfix</title></head><body>
+<div class="container">
+<div class="topbar"><div class="brand-row"><div class="logo-badge">M</div><div class="brand-name">Massfix</div></div><a href="/index.html">Inicio</a></div>
+<div class="hero"><div class="badge">Acesso do motorista</div><h2>Entrar no sistema</h2><p class="muted">O mesmo acesso funciona no site e no app.</p></div>
+<div class="card mt-16"><div>CPF</div><input class="input" id="cpf" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')"><div class="mt-16">Senha</div><input class="input" id="senha" type="password"><button class="btn btn-white mt-16" onclick="entrar()">Entrar</button></div>
+</div>
+<script>
+async function entrar(){
+ const r=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cpf:cpf.value,senha:senha.value})});
+ const txt=await r.text(); if(r.ok) location='/painel.html'; else alert(txt||'Erro');
+}
+</script></body></html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><title>Painel Administrativo · Massfix</title></head><body>
+<div class="container-wide">
+<div class="topbar"><div class="brand-row"><div class="logo-badge">M</div><div class="brand-name">Painel administrativo</div></div><button class="btn btn-outline" style="width:auto;padding:10px 14px" onclick="logoutAdmin()">Sair</button></div>
+
+<div class="grid-2">
+  <div class="hero">
+    <div class="badge">Configuracoes essenciais</div>
+    <h2>Editar site, app e valores</h2>
+    <div class="mt-16">Nome da empresa</div><input class="input" id="nome_empresa">
+    <div class="mt-16">Valor almoco</div><input class="input" id="valor_almoco" type="number" step="0.01">
+    <div class="mt-16">Valor janta</div><input class="input" id="valor_janta" type="number" step="0.01">
+    <div class="mt-16">Valor pernoite</div><input class="input" id="valor_pernoite" type="number" step="0.01">
+    <div class="mt-16">Link para baixar / instalar app</div><input class="input" id="link_download_app">
+    <div class="mt-16">Logo do site</div><input class="input" id="logo_site" type="file" accept="image/*">
+    <div class="mt-16">Imagem da pagina inicial</div><input class="input" id="imagem_home" type="file" accept="image/*">
+    <button class="btn btn-white mt-16" onclick="salvarConfig()">Salvar configuracoes</button>
+  </div>
+
+  <div class="card">
+    <div class="badge">Seguranca do administrador</div>
+    <div class="mt-16">Senha atual</div><input class="input" id="senha_atual" type="password">
+    <div class="mt-16">Nova senha</div><input class="input" id="nova_senha" type="password">
+    <button class="btn btn-dark mt-16" onclick="alterarSenha()">Trocar senha do admin</button>
+    <div class="badge mt-16">Relatorio mensal</div>
+    <div class="mt-16">Mes</div><input class="input" id="mesRelatorio" type="month">
+    <div class="grid-2 mt-16">
+      <button class="btn btn-dark" onclick="carregarRelatorio()">Gerar relatorio</button>
+      <a class="btn btn-white" id="btnPdf" href="#" target="_blank">Baixar PDF</a>
+    </div>
+    <div class="mt-16">
+      <canvas id="grafico" height="220"></canvas>
+    </div>
+    <div class="table-wrap mt-16">
+      <table id="tabelaRelatorio">
+        <thead><tr><th>Motorista</th><th>Almoco</th><th>Janta</th><th>Pernoite</th><th>Outras</th><th>Total</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-20">
+  <div class="badge">Editar cadastro do motorista</div>
+  <div class="table-wrap mt-16">
+    <table id="tabelaMotoristas">
+      <thead><tr><th>Foto</th><th>Nome</th><th>CPF</th><th>Placa</th><th>Nova foto</th><th>Acao</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card mt-20">
+  <div class="badge">Pagamentos</div>
+  <div class="filters mt-16">
+    <div><div>Motorista</div><input class="input" id="filtroMotorista"></div>
+    <div><div>Tipo</div><select class="select" id="filtroTipo"><option value="">Todos</option><option value="almoco">Almoco</option><option value="janta">Janta</option><option value="pernoite">Pernoite</option><option value="outras_despesas">Outras despesas</option></select></div>
+    <div><div>Status</div><select class="select" id="filtroStatus"><option value="">Todos</option><option value="pendente">Pendente</option><option value="pago">Pago</option></select></div>
+    <div><button class="btn btn-white" onclick="renderizar()">Aplicar</button></div>
+  </div>
+  <div class="table-wrap mt-16"><table id="tabelaRegistros"><thead><tr><th>Motorista</th><th>Tipo</th><th>Valor</th><th>Ordem</th><th>Caixa</th><th>Status</th><th>Comprovante</th><th>Acao</th></tr></thead><tbody></tbody></table></div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let dadosCache=[], chartRef=null;
+function moeda(v){ return 'R$ '+Number(v||0).toFixed(2); }
+async function validarAdmin(){ const r=await fetch('/admin/me'); if(!r.ok) location='/admin-login.html'; }
+async function logoutAdmin(){ await fetch('/logout',{method:'POST'}); location='/admin-login.html'; }
+async function alterarSenha(){
+ const r=await fetch('/admin/alterar-senha',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({senha_atual:senha_atual.value,nova_senha:nova_senha.value})});
+ const txt=await r.text();
+ if(r.ok){ alert('Senha do administrador alterada com sucesso.'); senha_atual.value=''; nova_senha.value=''; } else alert(txt||'Erro ao trocar senha.');
+}
+
+async function carregarConfig(){
+ const r=await fetch('/config'); const cfg=await r.json();
+ nome_empresa.value=cfg.nome_empresa||'';
+ valor_almoco.value=cfg.valor_almoco||35;
+ valor_janta.value=cfg.valor_janta||35;
+ valor_pernoite.value=cfg.valor_pernoite||200;
+ link_download_app.value=cfg.link_download_app||'/login.html';
+}
+async function salvarConfig(){
+ const fd=new FormData();
+ fd.append('nome_empresa', nome_empresa.value);
+ fd.append('valor_almoco', valor_almoco.value);
+ fd.append('valor_janta', valor_janta.value);
+ fd.append('valor_pernoite', valor_pernoite.value);
+ fd.append('link_download_app', link_download_app.value);
+ if(logo_site.files[0]) fd.append('logo_site', logo_site.files[0]);
+ if(imagem_home.files[0]) fd.append('imagem_home', imagem_home.files[0]);
+ const r=await fetch('/admin/config',{method:'POST', body:fd});
+ const txt=await r.text();
+ if(r.ok) alert('Configuracoes salvas com sucesso.'); else alert(txt||'Erro ao salvar.');
+}
+
+async function carregarMotoristas(){
+ const r=await fetch('/admin/motoristas'); if(!r.ok) return;
+ const dados=await r.json();
+ const tbody=document.querySelector('#tabelaMotoristas tbody'); tbody.innerHTML='';
+ dados.forEach(m=>{
+   const foto = m.foto_perfil ? '<img src="/uploads/'+m.foto_perfil+'" style="width:44px;height:44px;border-radius:50%;object-fit:cover">' : '';
+   const tr=document.createElement('tr');
+   tr.innerHTML='<td>'+foto+'</td><td><input class="input" id="nome_'+m.id+'" value="'+(m.nome||'')+'" style="min-width:180px"></td><td>'+(m.cpf||'')+'</td><td><input class="input" id="placa_'+m.id+'" value="'+(m.placa||'')+'" style="min-width:120px"></td><td><input class="input" id="foto_'+m.id+'" type="file" accept="image/*"></td><td><button class="btn btn-white" style="padding:10px 12px" onclick="salvarMotorista('+m.id+')">Salvar</button></td>';
+   tbody.appendChild(tr);
+ });
+}
+async function salvarMotorista(id){
+ const fd=new FormData();
+ fd.append('nome', document.getElementById('nome_'+id).value);
+ fd.append('placa', document.getElementById('placa_'+id).value);
+ const inp=document.getElementById('foto_'+id);
+ if(inp.files[0]) fd.append('foto_perfil', inp.files[0]);
+ const r=await fetch('/admin/motoristas/'+id,{method:'POST', body:fd});
+ const txt=await r.text();
+ if(r.ok){ alert('Motorista atualizado.'); carregarMotoristas(); carregarRegistros(); } else alert(txt||'Erro ao atualizar motorista.');
+}
+
+async function carregarRegistros(){ const r=await fetch('/admin/dados'); if(!r.ok) return; dadosCache=await r.json(); renderizar(); }
+function renderizar(){
+ const nome=(filtroMotorista.value||'').toLowerCase().trim();
+ const tipo=filtroTipo.value;
+ const status=filtroStatus.value;
+ const tbody=document.querySelector('#tabelaRegistros tbody'); tbody.innerHTML='';
+ dadosCache.filter(d=>{
+   const okNome=!nome||(d.nome||'').toLowerCase().includes(nome);
+   const okTipo=!tipo||d.tipo===tipo;
+   const okStatus=!status||d.status_pagamento===status;
+   return okNome&&okTipo&&okStatus;
+ }).forEach(d=>{
+   const st=d.status_pagamento==='pago' ? "<span class='status-pago'>Pago</span>" : "<span class='status-pendente'>Pendente</span>";
+   const comp=d.comprovante_pagamento ? '<a href="/uploads/'+d.comprovante_pagamento+'" target="_blank">Abrir</a>' : '';
+   const acao=d.status_pagamento==='pago' ? '-' : '<button class="btn btn-white" style="padding:10px 12px" onclick="marcarPago('+d.id+')">Marcar pago</button>';
+   const tr=document.createElement('tr');
+   tr.innerHTML='<td>'+(d.nome||'')+'</td><td>'+(d.tipo||'')+'</td><td>'+moeda(d.valor)+'</td><td>'+(d.ordem||'')+'</td><td>'+(d.caixa||'')+'</td><td>'+st+'</td><td>'+comp+'</td><td>'+acao+'</td>';
+   tbody.appendChild(tr);
+ });
+}
+async function marcarPago(id){
+ const r=await fetch('/admin/registros/'+id+'/pagar',{method:'POST'});
+ const txt=await r.text();
+ if(r.ok){ alert('Pagamento marcado e comprovante gerado.'); carregarRegistros(); carregarRelatorio(); } else alert(txt||'Erro ao marcar pagamento.');
+}
+
+async function carregarRelatorio(){
+ const mes = mesRelatorio.value;
+ if(!mes){ alert('Escolha o mes.'); return; }
+ btnPdf.href='/admin/relatorio-pdf?mes='+mes;
+ const r=await fetch('/admin/relatorio-mensal?mes='+mes);
+ if(!r.ok) return;
+ const dados=await r.json();
+ const tbody=document.querySelector('#tabelaRelatorio tbody'); tbody.innerHTML='';
+ let totalAl=0,totalJa=0,totalPe=0,totalOu=0;
+ dados.forEach(d=>{
+   totalAl += Number(d.almoco_total||0);
+   totalJa += Number(d.janta_total||0);
+   totalPe += Number(d.pernoite_total||0);
+   totalOu += Number(d.outras_total||0);
+   const tr=document.createElement('tr');
+   tr.innerHTML='<td>'+d.nome+'</td><td>'+moeda(d.almoco_total)+'</td><td>'+moeda(d.janta_total)+'</td><td>'+moeda(d.pernoite_total)+'</td><td>'+moeda(d.outras_total)+'</td><td>'+moeda(d.total_geral)+'</td>';
+   tbody.appendChild(tr);
+ });
+ const ctx=document.getElementById('grafico');
+ if(chartRef) chartRef.destroy();
+ chartRef = new Chart(ctx, {
+   type:'bar',
+   data:{ labels:['Almoco','Janta','Pernoite','Outras despesas'], datasets:[{label:'Totais do mes', data:[totalAl,totalJa,totalPe,totalOu]}] },
+   options:{ responsive:true, maintainAspectRatio:false }
+ });
+}
+(function definirMesAtual(){ const now=new Date(); const mes=String(now.getMonth()+1).padStart(2,'0'); mesRelatorio.value=now.getFullYear()+'-'+mes; })();
+validarAdmin(); carregarConfig(); carregarMotoristas(); carregarRegistros(); carregarRelatorio();
+</script></body></html>

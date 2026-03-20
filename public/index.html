@@ -1,0 +1,30 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><title>Massfix Reciclagem de Vidros</title></head><body>
+<div class="container-wide">
+<div class="topbar"><div class="brand-row"><div class="logo-badge">M</div><div class="brand-name" id="nomeEmpresa">Massfix Reciclagem de Vidros</div></div><div><a class="btn btn-outline" style="width:auto;padding:10px 14px" href="/admin-login.html">Admin</a></div></div>
+<div class="desktop-layout">
+  <div class="hero">
+    <div class="badge">Site + App</div>
+    <h1>Sistema completo para motorista e empresa</h1>
+    <p class="muted">O motorista pode criar cadastro, entrar pelo app ou pelo site e usar as mesmas funções em qualquer tamanho de tela.</p>
+    <div class="grid-2 mt-16">
+      <a class="btn btn-white" href="/cadastro.html">Criar cadastro do motorista</a>
+      <a class="btn btn-dark" href="/login.html">Entrar no sistema</a>
+    </div>
+    <a class="btn btn-outline mt-16" id="downloadBtn" href="/login.html">Baixar / instalar app</a>
+  </div>
+  <div class="card">
+    <div class="badge">Acesso rápido</div>
+    <div class="mt-16"><img id="imagemHome" class="preview-img hidden" alt="Imagem inicial"></div>
+    <p class="muted mt-16">Tambem funciona pelo navegador para quem nao quiser usar o app instalado.</p>
+  </div>
+</div>
+</div>
+<script>
+async function carregarConfig(){
+ const r=await fetch('/config'); const cfg=await r.json();
+ if(cfg.nome_empresa) nomeEmpresa.textContent=cfg.nome_empresa;
+ if(cfg.link_download_app) downloadBtn.href=cfg.link_download_app;
+ if(cfg.imagem_home){ imagemHome.src='/uploads/'+cfg.imagem_home; imagemHome.classList.remove('hidden'); }
+}
+carregarConfig();
+</script></body></html>
